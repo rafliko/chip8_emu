@@ -65,7 +65,7 @@ int chip8_load_rom(Chip8* chip8, char* path)
 	return 0;
 }
 
-void chip8_execute_instruction(Chip8 *chip8)
+void chip8_execute(Chip8 *chip8)
 {
 	uint16_t opcode = (uint16_t)((chip8->memory[chip8->pc] << 8) | chip8->memory[chip8->pc+1]);
 	chip8->pc += 2;
@@ -80,6 +80,8 @@ void chip8_execute_instruction(Chip8 *chip8)
 	uint16_t o3 = (opcode & 0x00F0);
 	uint16_t o4 = (opcode & 0x000F);
 	
+	uint8_t tmpvx;
+
 	// take first 4 bits
 	switch (o1) {
 	case 0x1000: // 1nnn: JMP nnn
@@ -87,7 +89,7 @@ void chip8_execute_instruction(Chip8 *chip8)
 		break;
 	case 0x2000: // 2nnn: CALL nnn
 		chip8->sp++;
-		chip8->stack[chip8->sp] = chip8->pc+2;
+		chip8->stack[chip8->sp] = chip8->pc;
 		chip8->pc = nnn;
 		break;
 	case 0x3000: // 3xkk: SKIP if Vx == kk
@@ -149,45 +151,54 @@ void chip8_execute_instruction(Chip8 *chip8)
 		break;
 	case 0x8001: // 8xy1: Vx |= Vy
 		chip8->V[x] |= chip8->V[y];
+		chip8->V[0xF] = 0;
 		break;
 	case 0x8002: // 8xy2: Vx &= Vy
 		chip8->V[x] &= chip8->V[y];
+		chip8->V[0xF] = 0;
 		break;
 	case 0x8003: // 8xy3: Vx ^= Vy
 		chip8->V[x] ^= chip8->V[y];
+		chip8->V[0xF] = 0;
 		break;
 	case 0x8004: // 8xy4: Vx += Vy, VF = carry
 		uint16_t sum = (uint16_t)chip8->V[x] + (uint16_t)chip8->V[y];
+		chip8->V[x] = (uint8_t)(sum & 0xFF);
 		if (sum > 0xFF) {
 			chip8->V[0xF] = 1;
 		} else {
 			chip8->V[0xF] = 0;
 		}
-		chip8->V[x] = (uint8_t)(sum & 0xFF);
 		break;
 	case 0x8005: // 8xy5: Vx -= Vy, VF = NOT borrow
-		if (chip8->V[x] > chip8->V[y]) {
+		tmpvx = chip8->V[x];
+		chip8->V[x] -= chip8->V[y];
+		if (tmpvx >= chip8->V[y]) {
 			chip8->V[0xF] = 1;
 		} else {
 			chip8->V[0xF] = 0;
 		}
-		chip8->V[x] -= chip8->V[y];
 		break;
 	case 0x8006: // 8xy6: Vx >>= 1, VF = lsb
-		chip8->V[0xF] = chip8->V[x] & 1;
+		tmpvx = chip8->V[x];
+		chip8->V[x] = chip8->V[y];
 		chip8->V[x] >>= 1;
+		chip8->V[0xF] = tmpvx & 1;
 		break;
 	case 0x8007: // 8xy7: Vx = Vy - Vx, VF = NOT borrow
-		if (chip8->V[y] > chip8->V[x]) {
+		tmpvx = chip8->V[x];
+		chip8->V[x] = chip8->V[y] - chip8->V[x];
+		if (chip8->V[y] >= tmpvx) {
 			chip8->V[0xF] = 1;
 		} else {
 			chip8->V[0xF] = 0;
 		}
-		chip8->V[x] = chip8->V[y] - chip8->V[x];
 		break;
-	case 0x8008: // 8xy8: Vx <<= 1, VF = msb
-		chip8->V[0xF] = chip8->V[x] >> 7;
+	case 0x800E: // 8xyE: Vx <<= 1, VF = msb
+		tmpvx = chip8->V[x];
+		chip8->V[x] = chip8->V[y];
 		chip8->V[x] <<= 1;
+		chip8->V[0xF] = tmpvx >> 7;
 		break;
 	case 0x9000: // 9xy0: SKIP if Vx != Vy
 		if (chip8->V[x] != chip8->V[y]) chip8->pc += 2;

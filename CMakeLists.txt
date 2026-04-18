@@ -14,3 +14,11 @@ set_target_properties(chip8_emu PROPERTIES
     C_STANDARD 11
     C_STANDARD_REQUIRED ON
 )
+
+if(WIN32)
+    add_custom_command(
+        TARGET chip8_emu POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:SDL3::SDL3-shared> $<TARGET_FILE_DIR:chip8_emu>
+        VERBATIM
+    )
+endif()

@@ -22,6 +22,6 @@ typedef struct {
 void chip8_init(Chip8* chip8);
 void chip8_tick_timers(Chip8 *chip8);
 int chip8_load_rom(Chip8* chip8, char* path);
-void chip8_execute_instruction(Chip8* chip8);
+void chip8_execute(Chip8* chip8);
 
 #endif
