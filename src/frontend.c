@@ -13,14 +13,18 @@ int main(int argc, char* argv[]) {
 
 	Chip8 c8;
 	chip8_init(&c8);
-	chip8_load_rom(&c8, argv[1]);
+	
+    if(chip8_load_rom(&c8, argv[1]) == 1) {
+        printf("Not able to open the file.");
+        return 1;
+    }
 		
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("SDL could not initialize! SDL_Error: %s", SDL_GetError());
         return 1;
     }
 
-    SDL_Window* window = SDL_CreateWindow("SDL3 Example", 64*SCALE, 32*SCALE, 0);
+    SDL_Window* window = SDL_CreateWindow("Chip-8 emulator", 64*SCALE, 32*SCALE, 0);
     if (!window) {
         SDL_Log("Window could not be created! SDL_Error: %s", SDL_GetError());
         return 1;
@@ -47,8 +51,8 @@ int main(int argc, char* argv[]) {
 			chip8_tick_timers(&c8);
 			lastTime = currentTime;
 		}
-
-		chip8_execute_instruction(&c8);
+        
+        chip8_execute_instruction(&c8); 
 
         // Clear screen
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);

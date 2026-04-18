@@ -47,10 +47,12 @@ void chip8_tick_timers(Chip8 *chip8)
 	if (chip8->sound_timer != 0) chip8->sound_timer--;
 }
 
-void chip8_load_rom(Chip8* chip8, char* path)
+int chip8_load_rom(Chip8* chip8, char* path)
 {
 	FILE *file;
 	file = fopen(path, "rb");
+
+	if (file == NULL) return 1;
 
 	fseek(file, 0, SEEK_END);
     long rom_size = ftell(file);
@@ -59,6 +61,8 @@ void chip8_load_rom(Chip8* chip8, char* path)
 	fread(&chip8->memory[START_ADDR], 1, rom_size, file);
 	
 	fclose(file);
+
+	return 0;
 }
 
 void chip8_execute_instruction(Chip8 *chip8)
@@ -134,7 +138,6 @@ void chip8_execute_instruction(Chip8 *chip8)
 	default:
 		break;
 	}
-	
 
 	// take first and last 4 bits
 	switch (o1 | o4) {
@@ -262,8 +265,8 @@ void chip8_execute_instruction(Chip8 *chip8)
 	default:
 		break;
 	}
-
-	//printf("Opcode: %x\n", opcode);
-	//printf("PC: %x\n", chip8->pc);
-	//printf("I: %x\n", chip8->I);
+	
+	// printf("Opcode: %x\n", opcode);
+	// printf("PC: %x\n", chip8->pc);
+	// printf("I: %x\n", chip8->I);
 }
