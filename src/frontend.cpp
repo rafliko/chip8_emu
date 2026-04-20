@@ -121,7 +121,14 @@ int main(int argc, char* argv[])
                 btn = keymap(e.key.key);
                 if (btn != -1) chip8->keypad[btn] = 1;
                 else if (e.key.key == SDLK_ESCAPE) quit = true; 
-                else if (!load_rom_dialog && e.key.key == SDLK_P) emu_speed==0? emu_speed=BASE_SPEED : emu_speed=0;
+                else if (!load_rom_dialog && e.key.key == SDLK_P) emu_speed=0;
+                else if (!load_rom_dialog && e.key.key == SDLK_F5) {
+                    delete(chip8);
+                    chip8 = new Chip8();
+                    if (chip8->load_rom(filename) == 1) {
+                        printf("Not able to open the file.\n");
+                    }
+                }
             } 
             else if (e.type == SDL_EVENT_KEY_UP) {
                 btn = keymap(e.key.key);
@@ -169,7 +176,7 @@ int main(int argc, char* argv[])
             }
 
             if (ImGui::BeginMenu("Emulation")) {
-                if (ImGui::MenuItem("Reload")) {
+                if (ImGui::MenuItem("Reload", "F5")) {
                     delete(chip8);
                     chip8 = new Chip8();
                     if (chip8->load_rom(filename) == 1) {
