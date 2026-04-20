@@ -5,12 +5,12 @@
 
 class Chip8 {
 public:
-    uint8_t sound_timer;
     bool display[64 * 32];
     bool keypad[16];
 
     Chip8();
     void tick_timers();
+    uint8_t get_sound_timer();
     int load_rom(char* path);
     void execute();
 
@@ -22,4 +22,5 @@ private:
     uint16_t stack[16];
     uint16_t sp; // stack pointer
     uint8_t delay_timer;
+    uint8_t sound_timer;
 };

@@ -10,6 +10,7 @@
 
 #define SCALE 20.0f
 #define MENU_PADDING 20.0f
+#define BASE_SPEED 10
 
 int keymap(SDL_Keycode keycode) 
 {
@@ -44,10 +45,13 @@ void create_audio_samples(SDL_AudioSpec spec, float frequency, float amplitude, 
 
 int main(int argc, char* argv[]) 
 {
+    char filename[256] = "";
+
     // Chip-8 init
 	Chip8* chip8 = new Chip8();
     if (argc == 2) {
-        if(chip8->load_rom(argv[1]) == 1) {
+        strcpy(filename, argv[1]);
+        if(chip8->load_rom(filename) == 1) {
             printf("Not able to open the file.\n");
         }
     }
@@ -95,8 +99,11 @@ int main(int argc, char* argv[])
     // Variables used in the main loop
 	unsigned int lastTime = 0, currentTime;
     bool quit = false;
-    int emu_speed = 2;
+    int emu_speed = 10;
     bool load_rom_dialog = false;
+    uint32_t last_tick_time = 0;
+    uint32_t delta = 0;
+    uint32_t timer_60hz = 0;
     SDL_Color clear_color = { 0, 0, 0, 255 };
     SDL_Color draw_color = { 255, 255, 255, 255 };
     
@@ -114,7 +121,7 @@ int main(int argc, char* argv[])
                 btn = keymap(e.key.key);
                 if (btn != -1) chip8->keypad[btn] = 1;
                 else if (e.key.key == SDLK_ESCAPE) quit = true; 
-                else if (!load_rom_dialog && e.key.key == SDLK_P) emu_speed==0? emu_speed=2 : emu_speed=0;
+                else if (!load_rom_dialog && e.key.key == SDLK_P) emu_speed==0? emu_speed=BASE_SPEED : emu_speed=0;
             } 
             else if (e.type == SDL_EVENT_KEY_UP) {
                 btn = keymap(e.key.key);
@@ -122,12 +129,20 @@ int main(int argc, char* argv[])
             }
         }
 
-        // Execute twice per frame
-        for (int i=0; i<emu_speed; i++) chip8->execute();
-        // Tick timers
-        chip8->tick_timers();
+        // Calculate deltatime
+        uint32_t tick_time = SDL_GetTicks();
+        delta = tick_time;
+        last_tick_time = tick_time;
+        timer_60hz += delta;
+
+        // Tick timers and execute at 60hz
+        if (timer_60hz > 1000/60) {
+            for (int i=0; i<emu_speed; i++) chip8->execute();
+            chip8->tick_timers();
+            timer_60hz = 0;
+        }
         // Beep
-        if (chip8->sound_timer > 0) {
+        if (chip8->get_sound_timer() > 0) {
             SDL_PutAudioStreamData(stream, beep_samples, sizeof(beep_samples));
         } else {
             SDL_ClearAudioStream(stream);
@@ -154,15 +169,22 @@ int main(int argc, char* argv[])
             }
 
             if (ImGui::BeginMenu("Emulation")) {
+                if (ImGui::MenuItem("Reload")) {
+                    delete(chip8);
+                    chip8 = new Chip8();
+                    if (chip8->load_rom(filename) == 1) {
+                        printf("Not able to open the file.\n");
+                    }
+                }
                 if (ImGui::MenuItem("Stop")) {
                     delete(chip8);
                     chip8 = new Chip8();
                 }
                 if (ImGui::BeginMenu("Speed")) {
                     if (ImGui::MenuItem("0.0x (freeze)", "P")) { emu_speed = 0; }
-                    if (ImGui::MenuItem("0.5x ")) { emu_speed = 1; }
-                    if (ImGui::MenuItem("1.0x")) { emu_speed = 2; }
-                    if (ImGui::MenuItem("2.0x")) { emu_speed = 4; }
+                    if (ImGui::MenuItem("0.5x ")) { emu_speed = BASE_SPEED/2; }
+                    if (ImGui::MenuItem("1.0x")) { emu_speed = BASE_SPEED; }
+                    if (ImGui::MenuItem("2.0x")) { emu_speed = BASE_SPEED*2; }
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
@@ -182,6 +204,10 @@ int main(int argc, char* argv[])
                         clear_color = { 154, 102, 1, 255}; 
                         draw_color = { 250, 206, 2, 255};
                     }
+                    if (ImGui::MenuItem("Ice")) { 
+                        clear_color = { 174, 224, 230, 255}; 
+                        draw_color = { 0, 0, 128, 255};
+                    }
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
@@ -191,20 +217,18 @@ int main(int argc, char* argv[])
             float width = ImGui::GetWindowWidth();
             ImGui::SameLine(width-170); 
             ImGui::TextDisabled("FPS: %.1f", ImGui::GetIO().Framerate);
-            ImGui::TextDisabled("Speed: %.1fx", (float)emu_speed/2);
+            ImGui::TextDisabled("Speed: %.1fx", (float)emu_speed/BASE_SPEED);
 
             ImGui::EndMainMenuBar();
         }
 
         // Load rom window
         if (load_rom_dialog) {
-            static char buffer[128] = "";
-            ImGui::Begin("Load ROM", &load_rom_dialog);
-            ImGui::InputText("ROM path", buffer, IM_ARRAYSIZE(buffer));
-            if (ImGui::Button("Load")) {
+            ImGui::Begin("Load ROM", &load_rom_dialog, ImGuiWindowFlags_AlwaysAutoResize);
+            if (ImGui::InputText("ROM path", filename, IM_ARRAYSIZE(filename), ImGuiInputTextFlags_EnterReturnsTrue)) {
                 delete(chip8);
                 chip8 = new Chip8();
-                if (chip8->load_rom(buffer) == 1) {
+                if (chip8->load_rom(filename) == 1) {
                     printf("Not able to open the file.\n");
                 }
                 load_rom_dialog = false;

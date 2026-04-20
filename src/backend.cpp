@@ -48,6 +48,11 @@ void Chip8::tick_timers()
 	if (this->sound_timer != 0) this->sound_timer--;
 }
 
+uint8_t Chip8::get_sound_timer()
+{
+	return sound_timer;
+}
+
 int Chip8::load_rom(char* path)
 {
 	FILE *file;
@@ -115,6 +120,8 @@ void Chip8::execute()
 		this->V[x] = (uint8_t)(rand() % 256) & kk;
 		break;
 	case 0xD000: // Dxyn: DRAW Vx, Vy, n
+		this->V[0xF] = 0;
+
 		pos_x = this->V[x];
 		pos_y = this->V[y];
 		
