@@ -10,7 +10,7 @@
 
 #define SCALE 20.0f
 #define MENU_PADDING 20.0f
-#define BASE_SPEED 10
+#define BASE_SPEED 20
 
 int keymap(SDL_Keycode keycode) 
 {
@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
     // Variables used in the main loop
 	unsigned int lastTime = 0, currentTime;
     bool quit = false;
-    int emu_speed = 10;
+    int emu_speed = BASE_SPEED;
     bool load_rom_dialog = false;
     uint32_t last_tick_time = 0;
     uint32_t delta = 0;
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
 
         // Calculate deltatime
         uint32_t tick_time = SDL_GetTicks();
-        delta = tick_time;
+        delta = tick_time - last_tick_time;
         last_tick_time = tick_time;
         timer_60hz += delta;
 
@@ -148,6 +148,7 @@ int main(int argc, char* argv[])
             chip8->tick_timers();
             timer_60hz = 0;
         }
+
         // Beep
         if (chip8->get_sound_timer() > 0) {
             SDL_PutAudioStreamData(stream, beep_samples, sizeof(beep_samples));
